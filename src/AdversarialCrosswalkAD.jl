@@ -12,7 +12,7 @@ module AdversarialCrosswalkAD
     export IntelligentDriverModel, action, set_desired_speed!, reset_hidden_state!
     include("intelligent_driver_model.jl")
 
-    export AdversarialCrosswalkMDP, step
+    export AdversarialCrosswalkMDP, step!
     include("mdp.jl")
 
 

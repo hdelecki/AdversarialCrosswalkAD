@@ -23,12 +23,12 @@ end
 #              rng=Random.GLOBAL_RNG,
 #              updater=NothingUpdater()) = RandomPolicy(rng, problem, updater)
 
-function observe_pedestrian(mdp, s, x)
+function observe_pedestrian(mdp::AdversarialCrosswalkMDP, s::Vector{Float64}, x::Vector{Float64})
     s_ped = s[3:end]
     return vcat(s_ped[1:2] .+ x[1:2], s_ped[3:4] .+ x[3:4])
 end
 
-function action_sut(mdp::AdversarialCrosswalkMDP, s::Vector{Float64}, x::Float64)
+function action_sut(mdp::AdversarialCrosswalkMDP, s::Vector{Float64}, x::Vector{Float64})
     o_ped = observe_pedestrian(mdp, s, x)
     
     x_ego = s[1]
@@ -40,10 +40,10 @@ function action_sut(mdp::AdversarialCrosswalkMDP, s::Vector{Float64}, x::Float64
     # if pedestrian in road headway
     # else headway = 0
 
-    if observed_s_ped[2] > -mdp.crosswalk_width
-        a_ego = action(mdp.policy, [vx_ego, vx_ped, x_ped - x_ego])
+    if o_ped[2] > -mdp.crosswalk_width/2
+        a_ego = action(mdp.sut_policy, [vx_ego, vx_ped, x_ped - x_ego])
     else
-        a_ego = action(mdp.policy, v_ego)
+        a_ego = action(mdp.sut_policy, vx_ego)
     end
 
     return a_ego
