@@ -45,7 +45,7 @@ end
 
     dist_traj = copy(dist_buffer)
     temp = 0.001
-    error = clamp(0.5 - minimum(dist_traj), 0, Inf)
+    error = clamp(minimum(dist_traj) - 0.5, 0, Inf)
     Turing.@addlogprob! logpdf(Exponential(temp), error)
 end
 
@@ -55,15 +55,15 @@ sut_policy = IntelligentDriverModel(v_des=v_des)
 mdp = AdversarialCrosswalkMDP(sut_policy, 0.1, 1.0, 4.0, 3.0)
 
 s_ego = [-25., v_des]
-s_ped = [0.0, -4.0, 0.0, 1.0]
+s_ped = [0.0, -5.0, 0.0, 1.0]
 s0 = vcat(s_ego, s_ped)
 
 horizon = 50
 var = Vector{Float64}([0.1, 0.1, 0.1, 0.1, 0.01, 0.1])
 model = crosswalk_model(mdp, s0, var, missing, horizon)
 
-iterations = 500
-chain = sample(model, NUTS(500, 0.4), iterations)
+iterations = 100
+chain = sample(model, NUTS(100, 0.6), iterations)
 
 
 df = DataFrame(chain)
@@ -79,7 +79,7 @@ for i=1:size(chain_data, 1)
 end
 
 
-local p1 = plot()
+p1 = plot()
 p2 = plot()
 p3 = plot()
 for i = 1:iterations
