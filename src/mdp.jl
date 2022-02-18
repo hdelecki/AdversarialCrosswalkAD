@@ -41,7 +41,9 @@ function action_sut(mdp::AdversarialCrosswalkMDP, s::Vector{Float64}, x::Vector{
     # else headway = 0
     #headway = clamp(x_ped - x_ego, 0, Inf)
     if o_ped[2] > -mdp.lane_width/2 && o_ped[2] < mdp.lane_width/2 && x_ped >= x_ego
-        @show x_ped - x_ego
+        # @show x_ped - x_ego
+        # y_ped = o_ped[2]
+        # @show y_ped
         headway = x_ped - x_ego
         #clamp(headway, 0, Inf)
         a_ego = action(mdp.sut_policy, [vx_ego, vx_ped, headway])

@@ -24,6 +24,7 @@ s0 = vcat(s_ego, s_ped)
 
 n_iter = 50
 x = zeros(6, n_iter)
+x[6, :] .= 0.25
 
 traj = simulate(mdp, x, s0)
 
