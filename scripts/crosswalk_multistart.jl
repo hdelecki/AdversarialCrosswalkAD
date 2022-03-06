@@ -68,10 +68,12 @@ var = Vector{Float64}([0.1, 0.1, 0.1, 0.1, 0.01, 0.1])
 model = crosswalk_model(mdp, s0, var, missing, horizon)
 
 iterations = 100
-chain = sample(model, NUTS(iterations, 0.6), iterations, discard_adapt = false)
+# chain = sample(model, NUTS(iterations, 0.6), iterations, discard_adapt = false)
+num_chains = 4
+chains = mapreduce(c -> sample(model, NUTS(iterations, 0.6), iterations), chainscat, 1:num_chains)
 
 
-df = DataFrame(chain)
+df = DataFrame(chains)
 chain_data = Matrix(df)
 
 nsamples = size(chain_data, 1)
@@ -86,63 +88,32 @@ for i=1:size(chain_data, 1)
     min_dists[i] = minimum([ego_ped_distance(sampled_trajectories[:, j, i]) for j=1:horizon])
 end
 @show sum(min_dists .< 0.5)
-# #@show df
-
-# failure_mask = min_dists .< 0.5
-# failure_mask[1:10] .= 0
-# cumulative_failures = cumsum(failure_mask)
-# plot(cumsum(min_dists .< 0.5))
-
-# t = LinRange(0, 10, nsamples)
-# wallclock_data = hcat(t, cumulative_failures)
-
-# writedlm( "./data/hmc_wallclock.csv",  wallclock_data, ',')
 
 
-
-
-
-# Monte Carlo
-# @time begin
-#     mc_iterations = 100000
-#     mc_trajectories = zeros(6, horizon, mc_iterations)
-#     mc_min_dists = zeros(mc_iterations)
-#     xmc = filldist(MvNormal(zeros(6), var), horizon)
-#     mc_t = zeros(mc_iterations)
-
-#     for i = 1:mc_iterations
-#         xs = rand(xmc)
-#         mc_trajectories[:, :, i] = simulate(mdp, xs, s0)
-#         mc_min_dists[i] = minimum([ego_ped_distance(mc_trajectories[:, j, i]) for j=1:horizon])
-#     end
-#     @show sum(mc_min_dists .< 0.5)
-# end
-
-
-# p1 = plot()
-# p2 = plot()
-# p3 = plot()
-# for i = 1:iterations
-#     if min_dists[i] < 0.5
-#         failure_trajectory = sampled_trajectories[:, :, i]
-#         x_ped = failure_trajectory[3, :]
-#         y_ped = failure_trajectory[4, :]
-#         p1 = plot!(p1, x_ped, y_ped, color=:black, marker=:circle, legend=false)
+p1 = plot()
+p2 = plot()
+p3 = plot()
+for i = 1:iterations
+    if min_dists[i] < 0.5
+        failure_trajectory = sampled_trajectories[:, :, i]
+        x_ped = failure_trajectory[3, :]
+        y_ped = failure_trajectory[4, :]
+        p1 = plot!(p1, x_ped, y_ped, color=:black, marker=:circle, legend=false)
         
 
-#         samp = reshape(chain_data[i, 3:302], 6, :)
-#         p2 = plot!(p2, x_ped.+samp[1, :], y_ped .+ samp[2, :], color=:black, marker=:circle, legend=false)
+        samp = reshape(chain_data[i, 3:302], 6, :)
+        p2 = plot!(p2, x_ped.+samp[1, :], y_ped .+ samp[2, :], color=:black, marker=:circle, legend=false)
         
-#         ovx_ped = samp[3, :]
-#         ovy_ped = samp[4, :]
-#         p3 = plot!(p3, ovx_ped, ovy_ped)
-#     end
-# end
-# p1 = plot!(p1, axis_ratio=:equal)
-# display(p1)
+        ovx_ped = samp[3, :]
+        ovy_ped = samp[4, :]
+        p3 = plot!(p3, ovx_ped, ovy_ped)
+    end
+end
+p1 = plot!(p1, axis_ratio=:equal)
+display(p1)
 
-# p2 = plot!(p2, axis_ratio=:equal)
-# display(p2)
+p2 = plot!(p2, axis_ratio=:equal)
+display(p2)
 
-# p3 = plot!(p3, axis_ratio=:equal)
-# display(p3)
+p3 = plot!(p3, axis_ratio=:equal)
+display(p3)

@@ -13,7 +13,7 @@ module AdversarialCrosswalkAD
     include("intelligent_driver_model.jl")
 
     export AdversarialCrosswalkMDP, step!
-    include("mdp.jl")
+    include("crosswalk_mdp.jl")
 
 
 
