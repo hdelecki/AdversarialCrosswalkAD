@@ -47,9 +47,11 @@ end
     end
 
     dist_traj = copy(dist_buffer)
-    temp = 0.001
+    temp = 0.00001
     error = clamp(minimum(dist_traj) - 0.5, 0, Inf)
+    #if error > 0
     Turing.@addlogprob! logpdf(Exponential(temp), error)
+    #end
 end
 
 v_des = 11. # m/s
@@ -57,17 +59,20 @@ sut_policy = IntelligentDriverModel(v_des=v_des)
 mdp = AdversarialCrosswalkMDP(sut_policy, 0.1, 1.0, 4.0, 3.0)
 
 s_ego = [-25., v_des]
-s_ped = [0.0, -4.0, 0.0, 1.3]
+s_ped = [0.0, -3.5, 0.0, 1.3]
 s0 = vcat(s_ego, s_ped)
 
 horizon = 50
 var = Vector{Float64}([0.1, 0.1, 0.1, 0.1, 0.01, 0.1])
+var = sqrt.(var)
 #std = Vector{Float64}([0.1, 0.1, 0.1, 0.1, 0.01, 0.1])
 #var = std.^2
 #model = crosswalk_model(mdp, s0, var, missing, horizon)
 model = crosswalk_model(mdp, s0, var, missing, horizon)
 
 iterations = 100
+params = zeros(6, horizon)
+#params[5, :] .= -1.0
 chain = sample(model, NUTS(iterations, 0.6), iterations, discard_adapt = false)
 
 
@@ -119,30 +124,30 @@ end
 # end
 
 
-# p1 = plot()
-# p2 = plot()
-# p3 = plot()
-# for i = 1:iterations
-#     if min_dists[i] < 0.5
-#         failure_trajectory = sampled_trajectories[:, :, i]
-#         x_ped = failure_trajectory[3, :]
-#         y_ped = failure_trajectory[4, :]
-#         p1 = plot!(p1, x_ped, y_ped, color=:black, marker=:circle, legend=false)
+p1 = plot()
+p2 = plot()
+p3 = plot()
+for i = 1:iterations
+    if min_dists[i] < 0.5
+        failure_trajectory = sampled_trajectories[:, :, i]
+        x_ped = failure_trajectory[3, :]
+        y_ped = failure_trajectory[4, :]
+        p1 = plot!(p1, x_ped, y_ped, color=:black, marker=:circle, legend=false)
         
 
-#         samp = reshape(chain_data[i, 3:302], 6, :)
-#         p2 = plot!(p2, x_ped.+samp[1, :], y_ped .+ samp[2, :], color=:black, marker=:circle, legend=false)
+        samp = reshape(chain_data[i, 3:302], 6, :)
+        p2 = plot!(p2, x_ped.+samp[1, :], y_ped .+ samp[2, :], color=:black, marker=:circle, legend=false)
         
-#         ovx_ped = samp[3, :]
-#         ovy_ped = samp[4, :]
-#         p3 = plot!(p3, ovx_ped, ovy_ped)
-#     end
-# end
-# p1 = plot!(p1, axis_ratio=:equal)
-# display(p1)
+        ovx_ped = samp[3, :]
+        ovy_ped = samp[4, :]
+        p3 = plot!(p3, ovx_ped, ovy_ped)
+    end
+end
+p1 = plot!(p1, axis_ratio=:equal)
+display(p1)
 
-# p2 = plot!(p2, axis_ratio=:equal)
-# display(p2)
+p2 = plot!(p2, axis_ratio=:equal)
+display(p2)
 
-# p3 = plot!(p3, axis_ratio=:equal)
-# display(p3)
+p3 = plot!(p3, axis_ratio=:equal)
+display(p3)

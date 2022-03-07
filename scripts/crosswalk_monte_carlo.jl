@@ -34,7 +34,7 @@ sut_policy = IntelligentDriverModel(v_des=v_des)
 mdp = AdversarialCrosswalkMDP(sut_policy, 0.1, 1.0, 4.0, 3.0)
 
 s_ego = [-25., v_des]
-s_ped = [0.0, -4.0, 0.0, 1.3]
+s_ped = [0.0, -3.0, 0.0, 1.4]
 s0 = vcat(s_ego, s_ped)
 
 horizon = 50
