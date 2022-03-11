@@ -1,6 +1,7 @@
 using AdversarialCrosswalkAD
 using Turing
 using Zygote
+using Optim
 using Distributions
 using LinearAlgebra
 using DataFrames
@@ -38,12 +39,11 @@ end
     for i = 1:N
         sp = step!(mdp, s, x[:, i])
         # Calculate distance
-        x_diff = sp[1] - sp[3]
-        y_diff = sp[4]
+        s = sp
+        x_diff = s[1] - s[3]
+        y_diff = s[4]
         d = sqrt(x_diff^2 + y_diff^2)
         dist_buffer[i] = d
-
-        s = sp
     end
 
     dist_traj = copy(dist_buffer)
@@ -54,26 +54,32 @@ end
     #end
 end
 
-v_des = 11. # m/s
-sut_policy = IntelligentDriverModel(v_des=v_des)
+v_des = 11.1 # m/s
+sut_policy = AdversarialCrosswalkAD.IntelligentDriverModel(v_des=v_des)
 mdp = AdversarialCrosswalkMDP(sut_policy, 0.1, 1.0, 4.0, 3.0)
 
-s_ego = [-25., v_des]
-s_ped = [0.0, -3.5, 0.0, 1.3]
+# s_ego = [-25., v_des]
+# s_ped = [0.0, -5.0, 0.0, 1.4]
+s_ego = [-15., v_des]
+s_ped = [0.0, -2., 0.0, 1.4]
 s0 = vcat(s_ego, s_ped)
 
-horizon = 50
+horizon = 30
 var = Vector{Float64}([0.1, 0.1, 0.1, 0.1, 0.01, 0.1])
 var = sqrt.(var)
-#std = Vector{Float64}([0.1, 0.1, 0.1, 0.1, 0.01, 0.1])
-#var = std.^2
-#model = crosswalk_model(mdp, s0, var, missing, horizon)
 model = crosswalk_model(mdp, s0, var, missing, horizon)
 
+# mle = optimize(model, MLE())
+# xmle = reshape(mle.values.array, 6, :)
+# traj = simulate(mdp, xmle, s0)
+
 iterations = 100
-params = zeros(6, horizon)
+nchains = 100
+# params = zeros(6, horizon)
 #params[5, :] .= -1.0
-chain = sample(model, NUTS(iterations, 0.6), iterations, discard_adapt = false)
+#chain = sample(model, NUTS(iterations, 0.6), iterations, discard_adapt = false)
+chain = mapreduce(c -> sample(model, NUTS(iterations, 0.6), iterations, discard_adapt=false), chainscat, 1:nchains)
+
 
 
 df = DataFrame(chain)
@@ -85,15 +91,21 @@ nsamples = size(chain_data, 1)
 sampled_trajectories = zeros(6, horizon, nsamples)
 min_dists = zeros(nsamples)
 for i=1:size(chain_data, 1)
-    samp = reshape(chain_data[i, 3:302], 6, :)
+    samp = reshape(chain_data[i, 3:(2+6*horizon)], 6, :)
     sampled_trajectories[:, :, i] = simulate(mdp, samp, s0)
 
     min_dists[i] = minimum([ego_ped_distance(sampled_trajectories[:, j, i]) for j=1:horizon])
 end
 @show sum(min_dists .< 0.5)
-# #@show df
 
-# failure_mask = min_dists .< 0.5
+failure_mask = min_dists .< 0.5
+all_lp = df[!, :lp][failure_mask] .- logpdf(Exponential(0.00001), 0)
+running_mean = [mean(all_lp[1:i]) for i=1:length(all_lp)]
+
+running_max = [maximum(all_lp[1:i]) for i=1:length(all_lp)]
+plot(running_max)
+
+
 # failure_mask[1:10] .= 0
 # cumulative_failures = cumsum(failure_mask)
 # plot(cumsum(min_dists .< 0.5))
@@ -105,29 +117,10 @@ end
 
 
 
-
-
-# Monte Carlo
-# @time begin
-#     mc_iterations = 100000
-#     mc_trajectories = zeros(6, horizon, mc_iterations)
-#     mc_min_dists = zeros(mc_iterations)
-#     xmc = filldist(MvNormal(zeros(6), var), horizon)
-#     mc_t = zeros(mc_iterations)
-
-#     for i = 1:mc_iterations
-#         xs = rand(xmc)
-#         mc_trajectories[:, :, i] = simulate(mdp, xs, s0)
-#         mc_min_dists[i] = minimum([ego_ped_distance(mc_trajectories[:, j, i]) for j=1:horizon])
-#     end
-#     @show sum(mc_min_dists .< 0.5)
-# end
-
-
 p1 = plot()
 p2 = plot()
 p3 = plot()
-for i = 1:iterations
+for i = 1:iterations*nchains
     if min_dists[i] < 0.5
         failure_trajectory = sampled_trajectories[:, :, i]
         x_ped = failure_trajectory[3, :]
@@ -135,7 +128,7 @@ for i = 1:iterations
         p1 = plot!(p1, x_ped, y_ped, color=:black, marker=:circle, legend=false)
         
 
-        samp = reshape(chain_data[i, 3:302], 6, :)
+        samp = reshape(chain_data[i, 3:(2+6*horizon)], 6, :)
         p2 = plot!(p2, x_ped.+samp[1, :], y_ped .+ samp[2, :], color=:black, marker=:circle, legend=false)
         
         ovx_ped = samp[3, :]

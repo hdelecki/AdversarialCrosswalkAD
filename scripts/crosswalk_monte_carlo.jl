@@ -34,16 +34,17 @@ sut_policy = IntelligentDriverModel(v_des=v_des)
 mdp = AdversarialCrosswalkMDP(sut_policy, 0.1, 1.0, 4.0, 3.0)
 
 s_ego = [-25., v_des]
-s_ped = [0.0, -3.0, 0.0, 1.4]
+s_ped = [0.0, -5.0, 0.0, 1.4]
 s0 = vcat(s_ego, s_ped)
 
 horizon = 50
 var = Vector{Float64}([0.1, 0.1, 0.1, 0.1, 0.01, 0.1])
+var = sqrt.(var)
 
 
 # Monte Carlo
 @time begin
-    mc_iterations = 5000000
+    mc_iterations = 1000000
     mc_trajectories = zeros(6, horizon, mc_iterations)
     mc_min_dists = zeros(mc_iterations)
     xmc = filldist(MvNormal(zeros(6), var), horizon)

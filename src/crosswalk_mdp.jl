@@ -99,7 +99,7 @@ function step!(mdp::AdversarialCrosswalkMDP, s::Vector{Float64}, x::Vector{Float
     v_ped = s_ped[3:4]
     v_ped_new = v_ped .+ a_ped*dt
     #x_ped_new = x_ped .+ v_ped*dt .+ a_ped*dt^2
-    x_ped_new = x_ped .+ v_ped*dt #.+ a_ped*dt^2
+    x_ped_new = x_ped .+ v_ped*dt #.+ 0.5*a_ped*dt^2
 
     s_ego = s[1:2]
     v_ego_new = s_ego[2] + a_ego*dt
@@ -110,7 +110,7 @@ function step!(mdp::AdversarialCrosswalkMDP, s::Vector{Float64}, x::Vector{Float
     end
     #x_ego_new = s_ego[1] + s_ego[2]*dt + a_ego*dt^2
     #x_ego_new = s_ego[1] + s_ego[2]*dt + a_ego*dt^2
-    x_ego_new = s_ego[1] + s_ego[2]*dt #+ a_ego*dt^2
+    x_ego_new = s_ego[1] + s_ego[2]*dt# + 0.5*a_ego*dt^2
 
     s_new = vcat(x_ego_new, v_ego_new, x_ped_new, v_ped_new)
     return s_new
